@@ -1,6 +1,8 @@
 import { useState, useEffect } from "react";
+
 import './homepage.css';
-//import Footer from "../../layouts/footer/footer";       
+
+// import Footer from "../../layouts/footer/footer";       
 import { useNavigate } from 'react-router-dom';
 import { 
     FileCheck, 
@@ -22,9 +24,13 @@ import {
     X
 } from "lucide-react";
 
+
+
+// construcitons
 type Document = {
     id: string;
     title: string;
+    fileName: string;
     owner: string;
     timestamp: string;
     status: string;
@@ -54,6 +60,42 @@ type User = {
     avatarUrl: string;
 };
 
+type FileType = 'pdf' | 'word' | 'excel' | 'image';
+
+const getPreviewElement = (fileName: string) => {
+    const ext = fileName.split('.').pop()?.toLowerCase();
+
+    if (!ext) return null;
+
+    const fileUrl = `/${fileName}`;
+
+    switch (ext) {
+        case 'png':
+        case 'jpg':
+        case 'jpeg':
+            return <img src={fileUrl} alt="Belge Önizleme" className="max-h-full border shadow" />;
+        case 'pdf':
+            return (
+                <iframe
+                    src={fileUrl}
+                    className="w-full h-full"
+                    title="PDF Preview"
+                ></iframe>
+                );
+        case 'docx':
+        case 'xlsx':
+            return (
+                <div className="text-center text-sm text-gray-600">
+                    <a href={fileUrl} target="_blank" rel="noopener noreferrer" className="underline text-indigo-600">
+                    {fileName} dosyasını indir
+                    </a>
+                </div>
+            );
+        default:
+            return <p>Bu dosya türü için önizleme desteklenmiyor.</p>;
+        }
+};
+
 function Homepage() {
     const [documents, setDocuments] = useState<Document[]>([]);
     const [activeTab, setActiveTab] = useState("all");
@@ -63,11 +105,32 @@ function Homepage() {
     const [showCreateModal, setShowCreateModal] = useState(false);
     const [selectedDocument, setSelectedDocument] = useState<Document | null>(null);
 
+
+    //upload file section logic
+
+    const [selectedFileType, setSelectedFileType] = useState<FileType | "">("");
+    const [uploadedFile, setUploadedFile] = useState<File | null>(null);
+    const [documentTitle, setDocumentTitle] = useState("");
+    const [formTouched, setFormTouched] = useState(false);
+
+
+    const acceptedTypesMap: Record<FileType, string[]> = {
+    pdf: [".pdf"],
+    word: [".doc", ".docx"],
+    excel: [".xls", ".xlsx"],
+    image: [".png", ".jpg", ".jpeg"],
+    };
+    const acceptedExtensions = selectedFileType ? acceptedTypesMap[selectedFileType].join(",") : "";
+
     useEffect(() => {
+
+        // mockDocument
+        
         const mockDocuments: Document[] = [
         {
             id: "DOC-001",
             title: "Q1 Performans Raporu 2025",
+            fileName: "test_evrak.pdf",
             owner: "Ahmet Yılmaz",
             timestamp: "14 Mayıs 2025",
             status: "waiting_signature",
@@ -112,6 +175,7 @@ function Homepage() {
         {
             id: "DOC-002",
             title: "İş Ortaklığı Anlaşması",
+            fileName: "image.png",
             owner: "Ayşe Demir",
             timestamp: "10 Mayıs 2025",
             status: "signed",
@@ -166,6 +230,7 @@ function Homepage() {
         {
             id: "DOC-003",
             title: "Müşteri Hizmetleri Protokolü",
+            fileName: "test_doc.docx",
             owner: "Can Bilir",
             timestamp: "8 Mayıs 2025",
             status: "approved",
@@ -204,6 +269,7 @@ function Homepage() {
         {
             id: "DOC-004",
             title: "Tedarikçi Sözleşmesi 2025",
+            fileName: "test_excel.xlsx",
             owner: "Deniz Yıldız",
             timestamp: "5 Mayıs 2025",
             status: "created",
@@ -247,6 +313,7 @@ function Homepage() {
         walletAddress: "0x1a2b...3c4d",
         avatarUrl: "/api/placeholder/40/40"
         });
+
     }, []);
 
     const connectWallet = () => {
@@ -257,6 +324,8 @@ function Homepage() {
 
     type DocumentStatus = "created" | "waiting_signature" | "signed" | "approved";
 
+
+    //Status 
     const getStatusBadge = (status: DocumentStatus) => {
         switch (status) {
         case "created":
@@ -325,9 +394,22 @@ function Homepage() {
         setSelectedDocument(document);
     };
 
-    const handleSubmit = async () => {
+    const handleSubmit = async () => {  
+        setFormTouched(true); // show validation messages
+
+        if (!documentTitle.trim() || !uploadedFile) {
+            return; // stop if validation fails
+        }
         navigate(`/chooseSigner`);
+        
     };
+    const panelClose = () => {
+        setShowCreateModal(false);
+        setDocumentTitle("");
+        setSelectedFileType("");
+        setUploadedFile(null);
+
+    }
 
     const handleBackToList = () => {
         setSelectedDocument(null);
@@ -337,6 +419,7 @@ function Homepage() {
         <div className="d-flex flex-column gap-5 h-screen bg-gray-50">
         {/* Main content */}
         <div className="flex-1 flex flex-col overflow-hidden">
+            
             {/* Header */}
             <header className="bg-white shadow">
             <div className="px-6 py-4 flex justify-between items-center">
@@ -346,6 +429,8 @@ function Homepage() {
                 
                 {!selectedDocument && (
                     <div className="flex items-center space-x-4">
+
+                        {/* Search Box */}
                         <div className="relative">
                             <input 
                             type="text" 
@@ -357,6 +442,7 @@ function Homepage() {
                             <Search className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
                         </div>
                         
+                        {/* Upload new file */}
                         <button 
                             type="button"
                             onClick={() => setShowCreateModal(true)}
@@ -411,6 +497,8 @@ function Homepage() {
             )}
             </header>
 
+
+
             {/* Document list or document detail view */}
             <main className="flex-1 overflow-y-auto p-6 bg-gray-50">
                 {selectedDocument ? (
@@ -450,11 +538,12 @@ function Homepage() {
                             {/* Document Preview (Left) */}
                             <div className="flex-1 border rounded-md p-4 mr-4 min-h-96">
                                 <div className="flex justify-center items-center h-full">
-                                    <img 
+                                    {/* <img 
                                         src="/public/image.png" 
                                         alt="Belge Önizleme" 
                                         className="max-h-full border shadow"
-                                    />
+                                    /> */}
+                                    {getPreviewElement(selectedDocument.fileName)}
                                 </div>
                             </div>
                             
@@ -599,14 +688,17 @@ function Homepage() {
         </div>
 
         {/* Create Document Modal (simplified) */}
+        {/* Choose Document Option Panel */}
         {showCreateModal && (
+            // <div>
             <div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg shadow-xl w-full max-w-lg">
+
+            <div className="bg-white rounded-lg shadow-xl w-full max-w-lg"> 
                 <div className="flex justify-between items-center px-6 py-4 border-b">
                 <h3 className="text-lg font-medium">Yeni Belge Oluştur</h3>
                 <button 
                     type="button"
-                    onClick={() => setShowCreateModal(false)}
+                    onClick={() => panelClose()}
                     className="text-gray-400 hover:text-gray-500"
                 >
                     <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -622,10 +714,36 @@ function Homepage() {
                     </label>
                     <input 
                     type="text"
+                    value={documentTitle}
+                    onChange={(e) => setDocumentTitle(e.target.value)}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
                     placeholder="Belge için başlık girin"
                     />
-                </div>                
+                    {/* Warning if empty */}
+                    {formTouched && documentTitle.trim() === "" && (
+                    <p className="text-sm text-red-500 mt-1">Belge başlığı zorunludur.</p>
+                    )}
+                </div>      
+                <div className="mb-4">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Dosya Türü Seçin
+                    </label>
+                    <select
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm"
+                        value={selectedFileType}
+                        // onChange={(e) => setSelectedFileType(e.target.value)}
+                        onChange={(e) => {
+                            setSelectedFileType(e.target.value as FileType);
+                            setUploadedFile(null);
+                        }}
+                    >
+                        <option value="">-- Seçin --</option>
+                        <option value="pdf">PDF</option>
+                        <option value="word">Word (DOC, DOCX)</option>
+                        <option value="excel">Excel (XLS, XLSX)</option>
+                        <option value="image">Görsel (PNG, JPG)</option>
+                    </select>
+                </div>          
                 <div className="mb-6">
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                     Belge Yükle
@@ -636,10 +754,39 @@ function Homepage() {
                         <div className="flex text-sm text-gray-600">
                         <label className="relative cursor-pointer bg-white rounded-md font-medium text-indigo-600 hover:text-indigo-500 focus-within:outline-none">
                             <span>Dosya yükle</span>
-                            <input 
+                            {/* <input 
                             type="file" 
                             className="sr-only" 
                             onChange={(e) => console.log(e.target.files)} 
+                            /> */}
+                            <input 
+                            type="file"
+                            className="sr-only"
+                            accept={acceptedExtensions}
+                            disabled={!selectedFileType}
+                            onChange={(e) => {
+                                const file = e.target.files?.[0];
+                                if (!file) return;
+
+                                // Type guard to make TS happy
+                                if (!selectedFileType || !(selectedFileType in acceptedTypesMap)) {
+                                    alert("Lütfen önce bir dosya türü seçin.");
+                                    return;
+                                }
+
+                                const isValid = acceptedTypesMap[selectedFileType].some((ext) =>
+                                    file.name.toLowerCase().endsWith(ext)
+                                );
+
+                                if (!isValid) {
+                                    alert("Geçersiz dosya türü seçildi.");
+                                    e.target.value = ""; // clear input
+                                    return;
+                                }
+
+                                setUploadedFile(file);
+                                console.log(file);
+                            }}
                             />
                         </label>
                         <p className="pl-1">veya sürükle bırak</p>
@@ -649,18 +796,23 @@ function Homepage() {
                         </p>
                     </div>
                     </div>
+                    {formTouched && !uploadedFile && (
+                    <p className="text-sm text-red-500 mt-2 text-center">Lütfen bir dosya yükleyin.</p>
+                    )}
                 </div>
                 
+                {/* submit or cancel */}
                 <div className="pt-4 border-t flex justify-end">
                     <button
                     type="button"
-                    onClick={() => setShowCreateModal(false)}
+                    onClick={() => panelClose()}
                     className="bg-white py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 hover:bg-gray-50 mr-3"
                     >
                     İptal
                     </button>
                     <button
                     type="button"
+                    // disabled={!uploadedFile || !documentTitle.trim()}
                     className="btn_choose_signer py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white"
                     onClick={() => {
                         handleSubmit();

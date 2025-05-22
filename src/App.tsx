@@ -1,4 +1,7 @@
+//router
 import { createBrowserRouter, RouterProvider } from 'react-router-dom';
+
+//other pages
 import Homepage from './pages/homepage/homepage';
 import ChooseSigner from './pages/chooseSigner/chooseSigner';
 import Wallet from './pages/wallet/wallet';

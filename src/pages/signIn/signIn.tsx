@@ -8,6 +8,7 @@ function SignIn() {
     return (
         <div className="signin-page">
             <div className="signin-card">
+                
                 <h2 className="signin-title">Giriş Yap</h2>
                 <p className="signin-subtitle">Lütfen hesabınıza giriş yapın</p>
 
@@ -31,6 +32,7 @@ function SignIn() {
                     />
 
                     <button type="submit" className="signin-btn">Giriş Yap</button>
+                    
                 </form>
 
                 <p className="signin-footer-text">
